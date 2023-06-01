@@ -1,0 +1,19 @@
+---
+title: "Feature Selection and Classification with Random Forest"
+output: github_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(randomForest)
+library(caret)
+```
+
+# Read and Analyse Data
+```{r}
+data(iris)
+str(iris)
+summary(iris)
+```
