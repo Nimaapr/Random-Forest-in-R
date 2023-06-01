@@ -11,9 +11,87 @@ library(randomForest)
 library(caret)
 ```
 
-# Read and Analyse Data
+## Read and Analyse Data
 ```{r}
 data(iris)
 str(iris)
 summary(iris)
 ```
+
+## Visualization
+```{r}
+pairs(iris[1:4], main = "Iris Data (red=setosa, green=versicolor, blue=virginica)",
+       pch = 21, bg = c("red", "green3", "blue")[unclass(iris$Species)])
+```
+
+## Feature Selection and Random Forest Classification
+```{r}
+set.seed(42)
+trainIndex <- createDataPartition(iris$Species, p = .8, list = FALSE)
+trainData <- iris[ trainIndex,]
+testData  <- iris[-trainIndex,]
+
+model <- randomForest(Species ~ ., data=trainData)
+print(model)
+
+pred <- predict(model, testData)
+confusionMatrix(pred, testData$Species)
+```
+## Feature selection with correlation and random forest classification
+```{r}
+# Compute correlation matrix and remove highly correlated variables
+corMatrix <- cor(trainData[, -5])
+highCorFeatures <- findCorrelation(corMatrix, cutoff = .7)
+reducedTrainData <- trainData[, -highCorFeatures]
+
+model2 <- randomForest(Species ~ ., data=reducedTrainData)
+print(model2)
+
+reducedTestData <- testData[, -highCorFeatures]
+pred2 <- predict(model2, reducedTestData)
+confusionMatrix(pred2, testData$Species)
+```
+## Univariate feature selection and random forest classification
+```{r}
+set.seed(42)
+control <- rfeControl(functions=rfFuncs, method="cv", number=10)
+results <- rfe(trainData[,1:4], trainData[,5], sizes=c(1:4), rfeControl=control)
+print(results)
+
+model3 <- randomForest(Species ~ ., data=trainData[,c(results$optVariables, "Species")])
+pred3 <- predict(model3, testData[,c(results$optVariables, "Species")])
+confusionMatrix(pred3, testData$Species)
+```
+## Recursive feature elimination (RFE) with random forest
+```{r}
+control2 <- rfeControl(functions=rfFuncs, method="cv", number=10)
+results2 <- rfe(trainData[,1:4], trainData[,5], sizes=c(1:4), rfeControl=control2)
+print(results2)
+
+model4 <- randomForest(Species ~ ., data=trainData[,c(results2$optVariables, "Species")])
+pred4 <- predict(model4, testData[,c(results2$optVariables, "Species")])
+confusionMatrix(pred4, testData$Species)
+```
+## Feature Extraction with PCA
+```{r}
+pca <- prcomp(trainData[, -5], center = TRUE, scale. = TRUE)
+trainData_pca <- data.frame(pca$x, Species = trainData$Species)
+
+model5 <- randomForest(Species ~ ., data=trainData_pca)
+print(model5)
+
+testData_pca <- data.frame(predict(pca, newdata = testData[, -5]), Species = testData$Species)
+pred5 <- predict(model5, testData_pca)
+confusionMatrix(pred5, testData$Species)
+```
+## Conclusion
+
+In this project, we conducted various feature selection methods and classification using the Random Forest algorithm on the iris dataset. We observed how different feature selection strategies, such as correlation-based feature selection and univariate feature selection, influenced the performance of the Random Forest model. 
+
+The results highlighted the importance of selecting the right features for improving the accuracy and performance of a machine learning model. In some cases, reducing the number of features can lead to comparable, if not better, model performance. 
+
+We also explored how feature extraction using PCA affects the model. It's worth noting that the effectiveness of PCA largely depends on the dataset, and it might not always improve the model's performance. 
+
+Lastly, the use of the caret package in R provided us with powerful and efficient functions for model training and feature selection. 
+
+As with any machine learning project, the approaches and findings in this analysis are dataset-specific. It's crucial to perform similar analyses and adapt the methodology based on the specific requirements and properties of different datasets in real-world projects. 
